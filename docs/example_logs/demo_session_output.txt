@@ -1,0 +1,170 @@
+
+==============================================================================
+A. HAPPY PATH: order -> inventory reserved -> payment -> order confirmed (+ notifications)
+==============================================================================
+stock before: {'P001': 100, 'P002': 5, 'P003': 0}
+POST /orders -> 201 in 13 ms | order=ORD-5FF9A7365352 status=PENDING saga_state=STARTED correlation_id=demo-happy-1a8a
+GET /orders/ORD-5FF9A7365352 -> status=CONFIRMED saga_state=COMPLETED failure_reason=None
+stock after:  {'P001': 98, 'P002': 5, 'P003': 0}  (P001 reduced by 2)
+payment:      {'simulated': True, 'payment_id': 'PAY-524BD35CEB2A', 'order_id': 'ORD-5FF9A7365352', 'status': 'COMPLETED', 'reason': None, 'correlation_id': 'demo-happy-1a8a'}
+notification: status=SENT correlation_id=demo-happy-1a8a message='Your order ORD-5FF9A7365352 is confirmed.'
+notification: status=SENT correlation_id=demo-happy-1a8a message='Your order ORD-5FF9A7365352 has been received.'
+
+--- log lines for correlation ID demo-happy-1a8a (all services, time-ordered) ---
+11:46:16.446  order-service         INFO    order created  order_id=ORD-5FF9A7365352 customer_id=C001 item_count=1
+11:46:16.448  order-service         INFO    request completed  method=POST path=/orders status_code=201
+11:46:16.474  order-service         INFO    event published to broker  event_id=0c72b45b-0821-41b8-97d0-0c42cbba7a6b event_type=OrderCreated routing_key=order.created
+11:46:16.478  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:16.483  inventory-service     INFO    inventory reserved (simulated)  order_id=ORD-5FF9A7365352 lines=1
+11:46:16.485  notification-service  INFO    event processed successfully  event_id=0c72b45b-0821-41b8-97d0-0c42cbba7a6b event_type=OrderCreated order_id=ORD-5FF9A7365352 notification_id=NTF-71F3DBCF4276 delivery_status=SENT
+11:46:16.486  order-service         INFO    event published to broker  event_id=ff02a4bd-8c96-4ffd-8782-5b312292f275 event_type=ReserveInventory routing_key=inventory.reserve
+11:46:16.512  order-service         INFO    saga transition  order_id=ORD-5FF9A7365352 from_state=STARTED to_state=INVENTORY_RESERVED trigger=InventoryReserved event_id=eebd85f2-3179-4251-b7e6-121d75fc9fae
+11:46:16.516  inventory-service     INFO    event published to broker  event_id=eebd85f2-3179-4251-b7e6-121d75fc9fae event_type=InventoryReserved routing_key=inventory.reserved
+11:46:16.994  payment-service       INFO    payment completed (simulated)  order_id=ORD-5FF9A7365352 payment_id=PAY-524BD35CEB2A
+11:46:16.997  order-service         INFO    event published to broker  event_id=f9f34116-34a7-4d0f-aade-e0032f28db06 event_type=ProcessPayment routing_key=payment.process
+11:46:17.465  order-service         INFO    saga transition  order_id=ORD-5FF9A7365352 from_state=INVENTORY_RESERVED to_state=COMPLETED trigger=PaymentCompleted event_id=611b9169-dd7b-42e9-95ce-4cab3b6dcae6
+11:46:17.469  payment-service       INFO    event published to broker  event_id=611b9169-dd7b-42e9-95ce-4cab3b6dcae6 event_type=PaymentCompleted routing_key=payment.completed
+11:46:17.508  order-service         INFO    event published to broker  event_id=a80105d7-3fce-49f2-8d65-293e30fcb12e event_type=OrderConfirmed routing_key=order.confirmed
+11:46:17.508  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:17.509  notification-service  INFO    event processed successfully  event_id=a80105d7-3fce-49f2-8d65-293e30fcb12e event_type=OrderConfirmed order_id=ORD-5FF9A7365352 notification_id=NTF-B517DE74FC69 delivery_status=SENT
+
+16 log lines for correlation ID demo-happy-1a8a across 4 services
+
+==============================================================================
+B. COMPENSATION 1: inventory reservation fails -> order cancelled (payment never attempted)
+==============================================================================
+POST /orders -> 201 in 9 ms | order=ORD-A9B57C26D849 status=PENDING saga_state=STARTED correlation_id=demo-nostock-1a8a
+GET /orders/ORD-A9B57C26D849 -> status=CANCELLED saga_state=CANCELLED failure_reason=insufficient stock for P003 (requested 1, available 0)
+payment lookup: 404 (404 = payment was never attempted)
+
+--- log lines for correlation ID demo-nostock-1a8a (all services, time-ordered) ---
+11:46:18.347  order-service         INFO    order created  order_id=ORD-A9B57C26D849 customer_id=C001 item_count=1
+11:46:18.349  order-service         INFO    request completed  method=POST path=/orders status_code=201
+11:46:18.358  order-service         INFO    event published to broker  event_id=0efd538a-2ae9-429c-97f8-26ac2fec79f0 event_type=OrderCreated routing_key=order.created
+11:46:18.359  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:18.364  inventory-service     WARNING inventory reservation failed (simulated)  order_id=ORD-A9B57C26D849 product_id=P003 reason=insufficient stock for P003 (requested 1, available 0)
+11:46:18.365  order-service         INFO    event published to broker  event_id=342e5d14-b5de-4e97-9e96-ee8f816291e8 event_type=ReserveInventory routing_key=inventory.reserve
+11:46:18.366  notification-service  INFO    event processed successfully  event_id=0efd538a-2ae9-429c-97f8-26ac2fec79f0 event_type=OrderCreated order_id=ORD-A9B57C26D849 notification_id=NTF-31DFC50CFBE8 delivery_status=SENT
+11:46:18.525  order-service         INFO    saga transition  order_id=ORD-A9B57C26D849 from_state=STARTED to_state=CANCELLED trigger=InventoryReservationFailed event_id=851e171a-e237-464a-b378-6592ebcfc52c
+11:46:18.531  inventory-service     INFO    event published to broker  event_id=851e171a-e237-464a-b378-6592ebcfc52c event_type=InventoryReservationFailed routing_key=inventory.reservation_failed
+11:46:18.872  order-service         INFO    event published to broker  event_id=3b5add21-af3b-4102-938e-7f9a72b1708f event_type=OrderCancelled routing_key=order.cancelled
+11:46:18.873  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:18.874  notification-service  INFO    event processed successfully  event_id=3b5add21-af3b-4102-938e-7f9a72b1708f event_type=OrderCancelled order_id=ORD-A9B57C26D849 notification_id=NTF-4B4BCC0D31A7 delivery_status=SENT
+
+12 log lines for correlation ID demo-nostock-1a8a across 3 services
+
+==============================================================================
+C. COMPENSATION 2: payment fails -> reserved inventory is released -> order cancelled
+==============================================================================
+POST /orders -> 201 in 8 ms | order=ORD-A4EF6055BDDD status=PENDING saga_state=STARTED correlation_id=demo-declined-1a8a
+GET /orders/ORD-A4EF6055BDDD -> status=CANCELLED saga_state=CANCELLED failure_reason=card declined (simulated)
+P002 stock before=5 after=5 (reserved then released: unchanged)
+reservations: [{'product_id': 'P002', 'quantity': 2, 'status': 'RELEASED', 'correlation_id': 'demo-declined-1a8a'}]
+payment:      FAILED
+
+--- log lines for correlation ID demo-declined-1a8a (all services, time-ordered) ---
+11:46:19.402  order-service         INFO    order created  order_id=ORD-A4EF6055BDDD customer_id=C-DECLINE item_count=1
+11:46:19.403  order-service         INFO    request completed  method=POST path=/orders status_code=201
+11:46:19.412  order-service         INFO    event published to broker  event_id=4b24ee8d-133e-4bf7-9fb4-1e2a3d31fe4d event_type=OrderCreated routing_key=order.created
+11:46:19.412  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C-DECLINE
+11:46:19.416  inventory-service     INFO    inventory reserved (simulated)  order_id=ORD-A4EF6055BDDD lines=1
+11:46:19.419  notification-service  INFO    event processed successfully  event_id=4b24ee8d-133e-4bf7-9fb4-1e2a3d31fe4d event_type=OrderCreated order_id=ORD-A4EF6055BDDD notification_id=NTF-F94ADA2655C4 delivery_status=SENT
+11:46:19.419  order-service         INFO    event published to broker  event_id=7bed61c2-1a1d-4a1a-98d7-335d15e5d217 event_type=ReserveInventory routing_key=inventory.reserve
+11:46:19.537  order-service         INFO    saga transition  order_id=ORD-A4EF6055BDDD from_state=STARTED to_state=INVENTORY_RESERVED trigger=InventoryReserved event_id=0184d7bc-656a-4dfb-9548-0aafc72461aa
+11:46:19.541  inventory-service     INFO    event published to broker  event_id=0184d7bc-656a-4dfb-9548-0aafc72461aa event_type=InventoryReserved routing_key=inventory.reserved
+11:46:19.924  payment-service       WARNING payment declined (simulated)  order_id=ORD-A4EF6055BDDD payment_id=PAY-D18F14AA312E
+11:46:19.928  order-service         INFO    event published to broker  event_id=c55d9300-b5ce-46a5-8810-1c27266e4fa6 event_type=ProcessPayment routing_key=payment.process
+11:46:19.979  order-service         INFO    saga transition  order_id=ORD-A4EF6055BDDD from_state=INVENTORY_RESERVED to_state=COMPENSATING trigger=PaymentFailed event_id=7efef832-f3ca-4568-a629-873a8805d8b2
+11:46:19.981  payment-service       INFO    event published to broker  event_id=7efef832-f3ca-4568-a629-873a8805d8b2 event_type=PaymentFailed routing_key=payment.failed
+11:46:20.437  inventory-service     INFO    inventory released (simulated compensation)  order_id=ORD-A4EF6055BDDD lines=1
+11:46:20.440  order-service         INFO    event published to broker  event_id=25890e55-13dc-4aa4-8aa0-96c30aef5af6 event_type=ReleaseInventory routing_key=inventory.release
+11:46:20.446  order-service         INFO    event published to broker  event_id=cd04a257-787d-4c17-8624-307d59ad18f4 event_type=OrderCancelled routing_key=order.cancelled
+11:46:20.446  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C-DECLINE
+11:46:20.447  notification-service  INFO    event processed successfully  event_id=cd04a257-787d-4c17-8624-307d59ad18f4 event_type=OrderCancelled order_id=ORD-A4EF6055BDDD notification_id=NTF-6F600279C1C0 delivery_status=SENT
+11:46:20.547  order-service         INFO    saga transition  order_id=ORD-A4EF6055BDDD from_state=COMPENSATING to_state=CANCELLED trigger=InventoryReleased event_id=9dce0ebf-6828-44d2-87cd-82379be89a4a
+11:46:20.547  order-service         INFO    saga compensation complete  order_id=ORD-A4EF6055BDDD released=True refunded=False
+11:46:20.551  inventory-service     INFO    event published to broker  event_id=9dce0ebf-6828-44d2-87cd-82379be89a4a event_type=InventoryReleased routing_key=inventory.released
+
+21 log lines for correlation ID demo-declined-1a8a across 4 services
+
+==============================================================================
+D. COMPENSATION 3: order cancelled AFTER successful payment -> refund + stock released
+==============================================================================
+POST /orders -> 201 in 10 ms | order=ORD-3C22B09D5B2C status=PENDING saga_state=STARTED correlation_id=demo-cancel-1a8a
+GET /orders/ORD-3C22B09D5B2C -> status=CONFIRMED saga_state=COMPLETED failure_reason=None
+P002 stock after purchase: 4 (was 5)
+POST /orders/ORD-3C22B09D5B2C/cancel -> 202 (accepted; compensation completes asynchronously)
+GET /orders/ORD-3C22B09D5B2C -> status=CANCELLED saga_state=CANCELLED failure_reason=cancelled by customer after payment
+payment: REFUNDED | P002 stock: 5 (restored to 5)
+
+--- log lines for correlation ID demo-cancel-1a8a (all services, time-ordered) ---
+11:46:21.494  order-service         INFO    order created  order_id=ORD-3C22B09D5B2C customer_id=C002 item_count=1
+11:46:21.495  order-service         INFO    request completed  method=POST path=/orders status_code=201
+11:46:21.506  order-service         INFO    event published to broker  event_id=dfc5d4bd-3afd-4e00-9f11-9e8df05cee4a event_type=OrderCreated routing_key=order.created
+11:46:21.506  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C002
+11:46:21.511  inventory-service     INFO    inventory reserved (simulated)  order_id=ORD-3C22B09D5B2C lines=1
+11:46:21.514  order-service         INFO    event published to broker  event_id=a17bb874-5aab-439a-a08b-5afad56926cf event_type=ReserveInventory routing_key=inventory.reserve
+11:46:21.514  notification-service  INFO    event processed successfully  event_id=dfc5d4bd-3afd-4e00-9f11-9e8df05cee4a event_type=OrderCreated order_id=ORD-3C22B09D5B2C notification_id=NTF-9660A120E3FD delivery_status=SENT
+11:46:21.559  order-service         INFO    saga transition  order_id=ORD-3C22B09D5B2C from_state=STARTED to_state=INVENTORY_RESERVED trigger=InventoryReserved event_id=2726b7e8-5867-4e9e-9c46-3aa7fab43bc2
+11:46:21.562  inventory-service     INFO    event published to broker  event_id=2726b7e8-5867-4e9e-9c46-3aa7fab43bc2 event_type=InventoryReserved routing_key=inventory.reserved
+11:46:22.021  payment-service       INFO    payment completed (simulated)  order_id=ORD-3C22B09D5B2C payment_id=PAY-3880B405CD77
+11:46:22.023  order-service         INFO    event published to broker  event_id=ab9e4573-8e3f-424d-aa7d-d7cb192a45b3 event_type=ProcessPayment routing_key=payment.process
+11:46:22.493  order-service         INFO    saga transition  order_id=ORD-3C22B09D5B2C from_state=INVENTORY_RESERVED to_state=COMPLETED trigger=PaymentCompleted event_id=4a24a70e-be5f-430f-b1e5-105b844be7e6
+11:46:22.497  payment-service       INFO    event published to broker  event_id=4a24a70e-be5f-430f-b1e5-105b844be7e6 event_type=PaymentCompleted routing_key=payment.completed
+11:46:22.531  order-service         INFO    event published to broker  event_id=2ad09d0f-cd7f-40d8-aab2-02a864b0a6f4 event_type=OrderConfirmed routing_key=order.confirmed
+11:46:22.532  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C002
+11:46:22.536  notification-service  INFO    event processed successfully  event_id=2ad09d0f-cd7f-40d8-aab2-02a864b0a6f4 event_type=OrderConfirmed order_id=ORD-3C22B09D5B2C notification_id=NTF-8C57A16FCCBD delivery_status=SENT
+11:46:22.540  order-service         INFO    saga transition  order_id=ORD-3C22B09D5B2C from_state=COMPLETED to_state=COMPENSATING trigger=CancelRequested
+11:46:22.543  order-service         INFO    order cancellation accepted  order_id=ORD-3C22B09D5B2C
+11:46:22.544  order-service         INFO    request completed  method=POST path=/orders/ORD-3C22B09D5B2C/cancel status_code=202
+11:46:22.552  payment-service       INFO    payment refunded (simulated compensation)  order_id=ORD-3C22B09D5B2C payment_id=PAY-3880B405CD77
+11:46:22.554  order-service         INFO    event published to broker  event_id=31580d54-e13c-4786-b1ee-977b07edeef6 event_type=RefundPayment routing_key=payment.refund
+11:46:22.557  inventory-service     INFO    inventory released (simulated compensation)  order_id=ORD-3C22B09D5B2C lines=1
+11:46:22.560  order-service         INFO    event published to broker  event_id=31e56b4b-13d7-4282-a1c8-5b59584c3fb6 event_type=ReleaseInventory routing_key=inventory.release
+11:46:22.567  order-service         INFO    event published to broker  event_id=ed385484-c100-4d90-950c-f1e55fa2a041 event_type=OrderCancelled routing_key=order.cancelled
+11:46:22.567  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C002
+11:46:22.570  inventory-service     INFO    event published to broker  event_id=d544802b-5b66-40ab-bcf5-f41d3c1667b8 event_type=InventoryReleased routing_key=inventory.released
+11:46:22.572  notification-service  INFO    event processed successfully  event_id=ed385484-c100-4d90-950c-f1e55fa2a041 event_type=OrderCancelled order_id=ORD-3C22B09D5B2C notification_id=NTF-28D22BF96EE0 delivery_status=SENT
+11:46:23.004  order-service         INFO    saga transition  order_id=ORD-3C22B09D5B2C from_state=COMPENSATING to_state=CANCELLED trigger=PaymentRefunded event_id=eb28f888-10d2-4b48-adc5-f26447d09a79
+11:46:23.004  order-service         INFO    saga compensation complete  order_id=ORD-3C22B09D5B2C released=True refunded=True
+11:46:23.008  payment-service       INFO    event published to broker  event_id=eb28f888-10d2-4b48-adc5-f26447d09a79 event_type=PaymentRefunded routing_key=payment.refunded
+
+30 log lines for correlation ID demo-cancel-1a8a across 4 services
+
+==============================================================================
+E. DUPLICATE DELIVERY: the same OrderCreated event published 3 times
+==============================================================================
+published copy 1/3 of event b8c674eb-972b-42b9-b617-272219af491b
+published copy 2/3 of event b8c674eb-972b-42b9-b617-272219af491b
+published copy 3/3 of event b8c674eb-972b-42b9-b617-272219af491b
+
+order_id=ORD-DUPDEMO-62930  correlation_id=dup-38c22c0a
+Check: curl 'localhost:8002/notifications?order_id=ORD-DUPDEMO-62930'   (expect exactly 1)
+       python tools/trace.py dup-38c22c0a
+
+notifications stored for ORD-DUPDEMO-62930: 1  (3 deliveries, 1 effect)
+
+--- log lines for correlation ID dup-38c22c0a (all services, time-ordered) ---
+11:46:24.262  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:24.270  notification-service  INFO    event processed successfully  event_id=b8c674eb-972b-42b9-b617-272219af491b event_type=OrderCreated order_id=ORD-DUPDEMO-62930 notification_id=NTF-D0A18BB202B5 delivery_status=SENT
+11:46:24.274  notification-service  INFO    duplicate event ignored  event_id=b8c674eb-972b-42b9-b617-272219af491b event_type=OrderCreated order_id=ORD-DUPDEMO-62930
+11:46:24.276  notification-service  INFO    duplicate event ignored  event_id=b8c674eb-972b-42b9-b617-272219af491b event_type=OrderCreated order_id=ORD-DUPDEMO-62930
+
+4 log lines for correlation ID dup-38c22c0a across 1 services
+
+==============================================================================
+F. DEAD-LETTERING: a malformed message is rejected and parked in the dead-letter queue
+==============================================================================
+published a malformed message to routing key order.created
+Check: python tools/demo.py dlq   (notification.order_events.dlq should have 1 message)
+
+notification.order_events            0
+notification.order_events.dlq        1
+inventory.commands                   0
+inventory.commands.dlq               0
+payment.commands                     0
+payment.commands.dlq                 0
+order.saga_replies                   0
+order.saga_replies.dlq               0
+
+service still healthy: {'status': 'ok', 'service': 'notification-service', 'database': 'ok', 'messaging': {'consumer_connected': True}}

@@ -1,0 +1,19 @@
+### 1. Restart Notification Service with SIMULATE_TRANSIENT_FAILURES=2 (demo knob)
+notification_service stopped
+notification_service started
+
+### 2. Place an order (its OrderCreated event will fail twice, then succeed)
+
+### 3. Notification Service log lines for demo-retry-15601
+19:48:26.019  notification-service  WARNING transient failure, will retry  queue=notification.order_events event_id=2cf20b92-0a8a-40df-968b-06bc7eb0a545 event_type=OrderCreated order_id=ORD-08EF2418BABB attempt=1 max_attempts=3 retry_in_seconds=0.5 error_type=TransientError error=simulated transient failure (demo)
+19:48:26.025  inventory-service     INFO    inventory reserved (simulated)  order_id=ORD-08EF2418BABB lines=1
+19:48:26.519  notification-service  WARNING transient failure, will retry  queue=notification.order_events event_id=2cf20b92-0a8a-40df-968b-06bc7eb0a545 event_type=OrderCreated order_id=ORD-08EF2418BABB attempt=2 max_attempts=3 retry_in_seconds=1.0 error_type=TransientError error=simulated transient failure (demo)
+19:48:27.536  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+19:48:27.539  notification-service  INFO    event processed successfully  event_id=2cf20b92-0a8a-40df-968b-06bc7eb0a545 event_type=OrderCreated order_id=ORD-08EF2418BABB notification_id=NTF-D8059C3949C3 delivery_status=SENT
+19:48:27.543  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+19:48:27.546  notification-service  INFO    event processed successfully  event_id=3fedd27a-83b2-49ad-9f90-99666455d591 event_type=OrderConfirmed order_id=ORD-08EF2418BABB notification_id=NTF-49DF4C78F351 delivery_status=SENT
+18 log lines for correlation ID demo-retry-15601 across 4 services
+
+### 4. Restore normal operation
+notification_service stopped
+notification_service started

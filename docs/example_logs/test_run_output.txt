@@ -1,0 +1,101 @@
+
+=================== common ===================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/claude/maltashop
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 27 items
+
+tests/test_events.py .......                                             [ 25%]
+tests/test_outbox.py .....                                               [ 44%]
+tests/test_process_message.py .........                                  [ 77%]
+tests/test_rabbitmq_integration.py ......                                [100%]
+
+============================== 27 passed in 0.77s ==============================
+
+=================== order_service ===================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/claude/maltashop
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 36 items
+
+tests/test_orders.py .....................                               [ 58%]
+tests/test_saga_and_events.py ...............                            [100%]
+
+=============================== warnings summary ===============================
+../.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/claude/maltashop/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 36 passed, 1 warning in 0.94s =========================
+
+=================== notification_service ===================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/claude/maltashop
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 26 items
+
+tests/test_event_consumption.py ............                             [ 46%]
+tests/test_notifications.py ..............                               [100%]
+
+=============================== warnings summary ===============================
+../.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/claude/maltashop/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 26 passed, 1 warning in 0.34s =========================
+
+=================== inventory_service ===================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/claude/maltashop
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 10 items
+
+tests/test_inventory.py ..........                                       [100%]
+
+=============================== warnings summary ===============================
+../.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/claude/maltashop/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 10 passed, 1 warning in 0.13s =========================
+
+=================== payment_service ===================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/claude/maltashop
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 8 items
+
+tests/test_payment.py ........                                           [100%]
+
+=============================== warnings summary ===============================
+../.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/claude/maltashop/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 8 passed, 1 warning in 0.11s =========================
+
+=================== end-to-end (4 real services + real RabbitMQ) ===================
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0
+rootdir: /home/claude/maltashop
+configfile: pytest.ini
+plugins: anyio-4.16.0
+collected 9 items
+
+tests_e2e/test_async_flow_and_saga.py .........                          [100%]
+
+============================== 9 passed in 13.90s ==============================

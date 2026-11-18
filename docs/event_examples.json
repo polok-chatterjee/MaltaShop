@@ -1,0 +1,56 @@
+[
+  {
+    "event_id": "699a4757-dafc-406e-915c-bdafe018c3e3",
+    "event_type": "OrderCreated",
+    "schema_version": 1,
+    "order_id": "ORD-32E1E9723F1B",
+    "customer_id": "C001",
+    "correlation_id": "demo-outage-27840",
+    "timestamp": "2026-11-17T19:48:18.234444Z",
+    "payload": {
+      "items": [
+        {
+          "product_id": "P001",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "event_id": "324e6720-99e2-45bb-8c37-c4f82a9316cf",
+    "event_type": "ReserveInventory",
+    "schema_version": 1,
+    "order_id": "ORD-32E1E9723F1B",
+    "customer_id": "C001",
+    "correlation_id": "demo-outage-27840",
+    "timestamp": "2026-11-17T19:48:18.235050Z",
+    "payload": {
+      "items": [
+        {
+          "product_id": "P001",
+          "quantity": 1
+        }
+      ]
+    }
+  },
+  {
+    "event_id": "affb6029-37a4-4e04-894c-cad201236f81",
+    "event_type": "ProcessPayment",
+    "schema_version": 1,
+    "order_id": "ORD-32E1E9723F1B",
+    "customer_id": "C001",
+    "correlation_id": "demo-outage-27840",
+    "timestamp": "2026-11-17T19:48:18.450768Z",
+    "payload": {}
+  },
+  {
+    "event_id": "1b356636-628c-4b6a-aa3e-47b2732e22a6",
+    "event_type": "OrderConfirmed",
+    "schema_version": 1,
+    "order_id": "ORD-32E1E9723F1B",
+    "customer_id": "C001",
+    "correlation_id": "demo-outage-27840",
+    "timestamp": "2026-11-17T19:48:18.894128Z",
+    "payload": {}
+  }
+]

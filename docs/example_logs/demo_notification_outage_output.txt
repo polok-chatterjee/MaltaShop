@@ -1,0 +1,30 @@
+### 1. Stop the Notification Service
+notification_service stopped
+
+### 2. Place an order while it is DOWN (correlation id demo-outage-27840)
+HTTP 201 in 0.019454s
+{"order_id":"ORD-32E1E9723F1B","customer_id":"C001","status":"PENDING","correlation_id":"demo-outage-27840","created_at":"2026-11-17T19:48:18.232662+00:00","items":[{"product_id":"P001","quantity":1}],"saga_state":"STARTED","failure_reason":null}
+
+### 3. The event is waiting in RabbitMQ (notification.order_events), not lost
+notification.order_events            2
+
+### 4. Meanwhile the saga continues without Notification Service:
+status=CONFIRMED saga_state=COMPLETED
+
+### 5. Restart the Notification Service
+notification_service started
+
+### 6. Queued events were consumed after restart; notifications for ORD-32E1E9723F1B:
+  status=SENT correlation_id=demo-outage-27840 message='Your order ORD-32E1E9723F1B is confirmed.'
+  status=SENT correlation_id=demo-outage-27840 message='Your order ORD-32E1E9723F1B has been received.'
+notification.order_events            0
+
+19:48:18.241  order-service         INFO    order created  order_id=ORD-32E1E9723F1B customer_id=C001 item_count=1
+19:48:18.244  order-service         INFO    request completed  method=POST path=/orders status_code=201
+19:48:18.291  order-service         INFO    event published to broker  event_id=699a4757-dafc-406e-915c-bdafe018c3e3 event_type=OrderCreated routing_key=order.created
+19:48:18.306  inventory-service     INFO    inventory reserved (simulated)  order_id=ORD-32E1E9723F1B lines=1
+19:48:21.108  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+19:48:21.110  notification-service  INFO    event processed successfully  event_id=699a4757-dafc-406e-915c-bdafe018c3e3 event_type=OrderCreated order_id=ORD-32E1E9723F1B notification_id=NTF-F8D592E37DD4 delivery_status=SENT
+19:48:21.113  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+19:48:21.115  notification-service  INFO    event processed successfully  event_id=1b356636-628c-4b6a-aa3e-47b2732e22a6 event_type=OrderConfirmed order_id=ORD-32E1E9723F1B notification_id=NTF-D4655867BE44 delivery_status=SENT
+16 log lines for correlation ID demo-outage-27840 across 4 services

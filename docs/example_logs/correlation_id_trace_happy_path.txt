@@ -1,0 +1,21 @@
+Real output of: python tools/trace.py demo-happy-1a8a
+(captured from a live run: 4 services + RabbitMQ)
+
+11:46:16.446  order-service         INFO    order created  order_id=ORD-5FF9A7365352 customer_id=C001 item_count=1
+11:46:16.448  order-service         INFO    request completed  method=POST path=/orders status_code=201
+11:46:16.474  order-service         INFO    event published to broker  event_id=0c72b45b-0821-41b8-97d0-0c42cbba7a6b event_type=OrderCreated routing_key=order.created
+11:46:16.478  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:16.483  inventory-service     INFO    inventory reserved (simulated)  order_id=ORD-5FF9A7365352 lines=1
+11:46:16.485  notification-service  INFO    event processed successfully  event_id=0c72b45b-0821-41b8-97d0-0c42cbba7a6b event_type=OrderCreated order_id=ORD-5FF9A7365352 notification_id=NTF-71F3DBCF4276 delivery_status=SENT
+11:46:16.486  order-service         INFO    event published to broker  event_id=ff02a4bd-8c96-4ffd-8782-5b312292f275 event_type=ReserveInventory routing_key=inventory.reserve
+11:46:16.512  order-service         INFO    saga transition  order_id=ORD-5FF9A7365352 from_state=STARTED to_state=INVENTORY_RESERVED trigger=InventoryReserved event_id=eebd85f2-3179-4251-b7e6-121d75fc9fae
+11:46:16.516  inventory-service     INFO    event published to broker  event_id=eebd85f2-3179-4251-b7e6-121d75fc9fae event_type=InventoryReserved routing_key=inventory.reserved
+11:46:16.994  payment-service       INFO    payment completed (simulated)  order_id=ORD-5FF9A7365352 payment_id=PAY-524BD35CEB2A
+11:46:16.997  order-service         INFO    event published to broker  event_id=f9f34116-34a7-4d0f-aade-e0032f28db06 event_type=ProcessPayment routing_key=payment.process
+11:46:17.465  order-service         INFO    saga transition  order_id=ORD-5FF9A7365352 from_state=INVENTORY_RESERVED to_state=COMPLETED trigger=PaymentCompleted event_id=611b9169-dd7b-42e9-95ce-4cab3b6dcae6
+11:46:17.469  payment-service       INFO    event published to broker  event_id=611b9169-dd7b-42e9-95ce-4cab3b6dcae6 event_type=PaymentCompleted routing_key=payment.completed
+11:46:17.508  order-service         INFO    event published to broker  event_id=a80105d7-3fce-49f2-8d65-293e30fcb12e event_type=OrderConfirmed routing_key=order.confirmed
+11:46:17.508  notification-service  INFO    simulated delivery  channel=EMAIL customer_id=C001
+11:46:17.509  notification-service  INFO    event processed successfully  event_id=a80105d7-3fce-49f2-8d65-293e30fcb12e event_type=OrderConfirmed order_id=ORD-5FF9A7365352 notification_id=NTF-B517DE74FC69 delivery_status=SENT
+
+16 log lines for correlation ID demo-happy-1a8a across 4 services

@@ -1,0 +1,79 @@
+{
+  "$defs": {
+    "EventType": {
+      "enum": [
+        "OrderCreated",
+        "OrderConfirmed",
+        "OrderCancelled",
+        "ReserveInventory",
+        "ReleaseInventory",
+        "ProcessPayment",
+        "RefundPayment",
+        "InventoryReserved",
+        "InventoryReservationFailed",
+        "InventoryReleased",
+        "PaymentCompleted",
+        "PaymentFailed",
+        "PaymentRefunded"
+      ],
+      "title": "EventType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Envelope (schema version 1). Unknown fields are rejected.",
+  "properties": {
+    "event_id": {
+      "description": "Globally unique ID; the idempotency key for consumers",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "event_type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "schema_version": {
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "order_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Order Id",
+      "type": "string"
+    },
+    "customer_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Customer Id",
+      "type": "string"
+    },
+    "correlation_id": {
+      "description": "Copied unchanged from the originating HTTP request",
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Correlation Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "UTC creation time",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "description": "Type-specific data (items, reason, payment_id ...)",
+      "title": "Payload",
+      "type": "object"
+    }
+  },
+  "required": [
+    "event_type",
+    "order_id",
+    "customer_id",
+    "correlation_id"
+  ],
+  "title": "Event",
+  "type": "object"
+}
